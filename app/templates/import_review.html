@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Review {{ imp.uploaded_filename }} — Ledger{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Review: {{ imp.uploaded_filename }}</h1>
+  <a class="btn btn-secondary" href="/import">← Back to imports</a>
+</div>
+<p class="hint">
+  {{ imp.card_name or 'Unknown card' }} ·
+  {{ imp.statement_period_start or '?' }} → {{ imp.statement_period_end or '?' }} ·
+  uploaded {{ imp.uploaded_at }}
+</p>
+
+{% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+{% if warn %}<div class="flash warn">{{ warn }}</div>{% endif %}
+{% if ok %}<div class="flash ok">{{ ok }}</div>{% endif %}
+
+{% set pending = txns | selectattr('status', 'equalto', 'pending') | list %}
+{% if pending %}
+<section class="panel">
+  <form method="post" action="/import/{{ imp.id }}/confirm">
+    <p class="hint">Nothing is counted until you confirm. Uncheck rows you don't want; categories and split types are editable.</p>
+    <table class="expense-table">
+      <thead>
+        <tr>
+          <th><input type="checkbox" checked onclick="document.querySelectorAll('.row-check').forEach(c => c.checked = this.checked)" title="Select all"></th>
+          <th>Date</th><th>Description</th><th class="num">Amount</th><th>Category</th><th>Split</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in pending %}
+        <tr>
+          <td><input type="checkbox" class="row-check" name="selected_{{ t.id }}" {% if t.amount > 0 %}checked{% endif %}></td>
+          <td><input type="date" name="date_{{ t.id }}" value="{{ t.date }}"></td>
+          <td><input type="text" name="description_{{ t.id }}" value="{{ t.description }}" style="width:100%"></td>
+          <td class="num">
+            <input type="number" step="0.01" name="amount_{{ t.id }}" value="{{ '%.2f' | format(t.amount) }}" style="width:6.5rem">
+            {% if t.amount <= 0 %}<div class="note">refund — edit or leave unchecked</div>{% endif %}
+          </td>
+          <td>
+            <select name="category_{{ t.id }}">
+              {% for c in categories %}
+              <option value="{{ c.id }}" {% if c.id == t.suggested_category_id %}selected{% endif %}>{{ c.name }}</option>
+              {% endfor %}
+            </select>
+            {% if not t.suggested_category_id %}<div class="note">no suggestion</div>{% endif %}
+          </td>
+          <td>
+            <select name="split_{{ t.id }}">
+              <option value="50_50">50%</option>
+              <option value="100_hers">100%</option>
+            </select>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="form-row" style="margin-top:0.75rem; align-items:center">
+      <button type="submit" class="btn btn-primary">Confirm import of checked rows</button>
+      <label style="flex-direction:row; align-items:center; gap:0.4rem">
+        <input type="checkbox" name="discard_unchecked"> discard unchecked rows
+      </label>
+    </div>
+  </form>
+</section>
+{% endif %}
+
+{% set done = txns | rejectattr('status', 'equalto', 'pending') | list %}
+{% if done %}
+<section class="panel" style="margin-top:1rem">
+  <h2>Already processed</h2>
+  <table class="expense-table">
+    <thead><tr><th>Date</th><th>Description</th><th class="num">Amount</th><th>Suggested category</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for t in done %}
+      <tr>
+        <td>{{ t.date }}</td>
+        <td>{{ t.description }}</td>
+        <td class="num">${{ '%.2f' | format(t.amount) }}</td>
+        <td>{{ t.suggested_category_name or '—' }}</td>
+        <td><span class="status-pill {{ t.status }}">{{ t.status }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if not txns %}
+<p class="empty">No transactions were extracted from this statement.</p>
+{% endif %}
+{% endblock %}

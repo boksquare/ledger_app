@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}History — Ledger{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Monthly History</h1></div>
+
+<section class="panel narrow">
+  <table class="expense-table">
+    <thead>
+      <tr><th>Month</th><th class="num">Total spending</th><th class="num">50% split</th><th class="num">100%</th><th class="num">Her total</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for s in summaries %}
+      <tr>
+        <td><a href="/month/{{ s.month }}">{{ s.month | monthname }}</a>{% if s.month == current_month %} <span class="tag">current</span>{% endif %}</td>
+        <td class="num">{{ s.total_spending | usd }}</td>
+        <td class="num">{{ s.half_share | usd }}</td>
+        <td class="num">{{ s.total_100_hers | usd }}</td>
+        <td class="num"><strong>{{ s.her_owed | usd }}</strong></td>
+        <td class="row-actions">
+          <a class="btn btn-secondary btn-sm" href="/export/{{ s.month }}.xlsx">Excel</a>
+          <a class="btn btn-secondary btn-sm" href="/export/{{ s.month }}.pdf">PDF</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="empty">No expenses recorded yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

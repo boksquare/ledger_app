@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ month }} — Ledger{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{% if month == current_month %}This Month{% else %}{{ month | monthname }}{% endif %}</h1>
+  <div class="page-head-actions">
+    <select id="month-picker" onchange="location.href='/month/' + this.value">
+      {# Always offer the current month and the month being viewed, even with no data yet. #}
+      {% for m in ((months + [current_month, month]) | unique | sort(reverse=true)) %}
+      <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m | monthname }}</option>
+      {% endfor %}
+    </select>
+    <details class="edit-popover month-jump">
+      <summary class="btn btn-secondary" title="Jump to any month">＋</summary>
+      <form class="expense-form"
+            onsubmit="event.preventDefault(); location.href = '/month/' + this.year.value + '-' + this.mon.value;">
+        <div class="form-row">
+          <label>Month
+            <select name="mon">
+              {% for num, name in [('01','January'),('02','February'),('03','March'),('04','April'),
+                                   ('05','May'),('06','June'),('07','July'),('08','August'),
+                                   ('09','September'),('10','October'),('11','November'),('12','December')] %}
+              <option value="{{ num }}" {% if num == month[5:7] %}selected{% endif %}>{{ name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Year <input type="number" name="year" value="{{ month[:4] }}" min="2000" max="2099" required></label>
+        </div>
+        <button type="submit" class="btn btn-primary">Go</button>
+      </form>
+    </details>
+    <a class="btn btn-secondary" href="/export/{{ month }}.xlsx">⬇ Excel</a>
+    <a class="btn btn-secondary" href="/export/{{ month }}.pdf">⬇ PDF</a>
+  </div>
+</div>
+
+<div id="dashboard-content">
+  {% include "partials/dashboard_content.html" %}
+</div>
+{% endblock %}

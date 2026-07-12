@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Import — Ledger{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Statement Import</h1></div>
+
+{% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+{% if warn %}<div class="flash warn">{{ warn }}</div>{% endif %}
+{% if ok %}<div class="flash ok">{{ ok }}</div>{% endif %}
+
+<section class="panel">
+  <form method="post" action="/import/upload" enctype="multipart/form-data" id="upload-form">
+    <div class="drop-zone">
+      <p>Upload one or more PDF, CSV, or Excel statements.<br>
+      <span class="hint">Billing cycles don't align to calendar months — upload multiple statements per card if needed.</span></p>
+      <input type="file" name="statements" accept=".pdf,.csv,.xlsx,.xlsm,.xls" multiple required>
+    </div>
+    <button type="submit" class="btn btn-primary"
+            onclick="this.textContent='Parsing with Claude… (this can take a minute)'; this.disabled=true; this.form.submit();">
+      Upload &amp; Parse
+    </button>
+  </form>
+</section>
+
+<section class="panel" style="margin-top:1rem">
+  <h2>Statement history</h2>
+  <table class="expense-table">
+    <thead>
+      <tr><th>Uploaded</th><th>File</th><th>Card</th><th>Period</th><th>Transactions</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for si in imports %}
+      <tr>
+        <td>{{ si.uploaded_at }}</td>
+        <td>{{ si.uploaded_filename }}</td>
+        <td>{{ si.card_name or '—' }}</td>
+        <td>{{ si.statement_period_start or '?' }} → {{ si.statement_period_end or '?' }}</td>
+        <td>
+          {% if si.pending_count %}<span class="status-pill pending">{{ si.pending_count }} pending</span>{% endif %}
+          {% if si.imported_count %}<span class="status-pill imported">{{ si.imported_count }} imported</span>{% endif %}
+          {% if si.discarded_count %}<span class="status-pill discarded">{{ si.discarded_count }} discarded</span>{% endif %}
+        </td>
+        <td><a class="btn btn-secondary btn-sm" href="/import/{{ si.id }}">Review</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="empty">No statements uploaded yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

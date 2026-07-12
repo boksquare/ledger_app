@@ -1,0 +1,131 @@
+<section class="summary-cards">
+  <div class="card headline">
+    <div class="card-label">Her Total</div>
+    <div class="card-value">{{ summary.her_owed | usd }}</div>
+    <div class="card-sub">{{ summary.half_share | usd }} (50% split) + {{ summary.total_100_hers | usd }} (100%)</div>
+  </div>
+  <div class="card">
+    <div class="card-label">50% split</div>
+    <div class="card-value">{{ summary.half_share | usd }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">100%</div>
+    <div class="card-value">{{ summary.total_100_hers | usd }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Total spending</div>
+    <div class="card-value">{{ summary.total_spending | usd }}</div>
+    <div class="card-sub">{{ summary.expense_count }} expense{{ '' if summary.expense_count == 1 else 's' }}</div>
+  </div>
+</section>
+
+<div class="dash-grid">
+  <section class="panel chart-panel">
+    <h2>Spending by category</h2>
+    {% if breakdown %}
+    <canvas id="category-pie" aria-label="Category spending pie chart"></canvas>
+    <script id="pie-data" type="application/json">{{ {"month": month, "filter_category_id": filter_category_id, "slices": breakdown} | tojson }}</script>
+    <p class="hint">Hover a slice for the amount · click to filter the list</p>
+    {% else %}
+    <p class="empty">No expenses yet this month.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <details class="quick-add" {% if not expenses %}open{% endif %}>
+      <summary class="btn btn-primary">＋ Add expense</summary>
+      <form hx-post="/expenses" hx-target="#dashboard-content" class="expense-form">
+        <input type="hidden" name="view_month" value="{{ month }}">
+        <div class="form-row">
+          <label>Description
+            <input type="text" name="description" list="desc-suggestions" autocomplete="off" required>
+          </label>
+          <label>Amount <input type="number" name="amount" step="0.01" min="0.01" placeholder="0.00" required></label>
+        </div>
+        <datalist id="desc-suggestions">
+          {% for d in descriptions %}<option value="{{ d }}">{% endfor %}
+        </datalist>
+        <div class="form-row">
+          <label>Category
+            <select name="category_id" required>
+              {% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+            </select>
+          </label>
+          <label>Split
+            <select name="split_type">
+              <option value="50_50">50%</option>
+              <option value="100_hers">100%</option>
+            </select>
+          </label>
+        </div>
+        <label>Notes <input type="text" name="notes" placeholder="optional"></label>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </form>
+    </details>
+
+    <h2>
+      Expenses
+      {% if filter_category_id %}
+        <span class="filter-chip">
+          filtered
+          <a href="#" hx-get="/partials/expenses?month={{ month }}" hx-target="#dashboard-content" title="Clear filter">✕</a>
+        </span>
+      {% endif %}
+      <span class="hint" style="font-weight:normal"> · click any field to edit</span>
+    </h2>
+    <table class="expense-table inline-editable">
+      <thead>
+        <tr><th>Description</th><th>Category</th><th>Split</th><th class="num">Amount</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for e in expenses %}
+        <tr id="expense-row-{{ e.id }}">
+          <td>
+            <span class="desc-wrap">
+              <input type="text" name="description" value="{{ e.description }}" class="cell-input"
+                     hx-post="/expenses/{{ e.id }}/inline?view_month={{ month }}{% if filter_category_id %}&category_id={{ filter_category_id }}{% endif %}"
+                     hx-trigger="change" hx-target="#dashboard-content">
+              {% if e.is_recurring_instance %}<span class="tag" title="Recurring">↻</span>{% endif %}
+              {% if e.statement_import_id %}<span class="tag" title="Imported from statement #{{ e.statement_import_id }}">📄</span>{% endif %}
+            </span>
+            <input type="text" name="notes" value="{{ e.notes or '' }}" placeholder="add note…" class="cell-input note-input"
+                   hx-post="/expenses/{{ e.id }}/inline?view_month={{ month }}{% if filter_category_id %}&category_id={{ filter_category_id }}{% endif %}"
+                   hx-trigger="change" hx-target="#dashboard-content">
+          </td>
+          <td>
+            <select name="category_id" class="cell-input"
+                    hx-post="/expenses/{{ e.id }}/inline?view_month={{ month }}{% if filter_category_id %}&category_id={{ filter_category_id }}{% endif %}"
+                    hx-trigger="change" hx-target="#dashboard-content">
+              {% for c in categories %}
+              <option value="{{ c.id }}" {% if c.id == e.category_id %}selected{% endif %}>{{ c.name }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          <td>
+            <select name="split_type" class="cell-input"
+                    hx-post="/expenses/{{ e.id }}/inline?view_month={{ month }}{% if filter_category_id %}&category_id={{ filter_category_id }}{% endif %}"
+                    hx-trigger="change" hx-target="#dashboard-content">
+              <option value="50_50" {% if e.split_type == '50_50' %}selected{% endif %}>50%</option>
+              <option value="100_hers" {% if e.split_type == '100_hers' %}selected{% endif %}>100%</option>
+            </select>
+          </td>
+          <td class="num">
+            <input type="number" step="0.01" min="0.01" name="amount" value="{{ '%.2f' | format(e.amount) }}"
+                   class="cell-input amount-input"
+                   hx-post="/expenses/{{ e.id }}/inline?view_month={{ month }}{% if filter_category_id %}&category_id={{ filter_category_id }}{% endif %}"
+                   hx-trigger="change" hx-target="#dashboard-content">
+          </td>
+          <td class="row-actions">
+            <button class="icon-btn danger" title="Delete"
+                    hx-delete="/expenses/{{ e.id }}?view_month={{ month }}"
+                    hx-confirm="Delete “{{ e.description }}” ({{ e.amount | usd }})?"
+                    hx-target="#dashboard-content">🗑</button>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="empty">Nothing here yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>

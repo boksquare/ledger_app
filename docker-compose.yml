@@ -1,0 +1,21 @@
+services:
+  bills-app:
+    build: .
+    container_name: bills-app
+    ports:
+      - "8321:8000"
+    volumes:
+      - bills_data:/data
+    environment:
+      # Required only for Phase 5 statement parsing. Uses your Claude Pro/Max
+      # subscription — on any machine with Claude Code, run `claude setup-token`
+      # and put CLAUDE_CODE_OAUTH_TOKEN=... in a .env file next to this compose file.
+      - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
+      # Optional: pick the model/effort used for statement parsing
+      # (e.g. LEDGER_AI_MODEL=sonnet, LEDGER_AI_EFFORT=low)
+      - LEDGER_AI_MODEL=${LEDGER_AI_MODEL:-}
+      - LEDGER_AI_EFFORT=${LEDGER_AI_EFFORT:-}
+    restart: unless-stopped
+
+volumes:
+  bills_data:

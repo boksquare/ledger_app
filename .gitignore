@@ -1,0 +1,13 @@
+# Secrets & local config — never commit
+.env
+.env.*
+!.env.example
+.claude/
+
+# Personal data: SQLite DB + uploaded bank statements
+data/
+
+# Python
+.venv/
+__pycache__/
+*.pyc

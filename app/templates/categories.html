@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Categories — Ledger{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Categories</h1></div>
+
+<section class="panel narrow">
+  <form method="post" action="/categories" class="form-row">
+    <input type="text" name="name" placeholder="New category name" required>
+    <button type="submit" class="btn btn-primary">Add</button>
+  </form>
+
+  <table class="expense-table">
+    <thead><tr><th>Name</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for c in categories %}
+      <tr class="{{ '' if c.active else 'inactive' }}">
+        <td>
+          <form method="post" action="/categories/{{ c.id }}/rename" class="rename-form">
+            <input type="text" name="name" value="{{ c.name }}">
+            <button type="submit" class="icon-btn" title="Rename">💾</button>
+          </form>
+        </td>
+        <td>{{ 'Active' if c.active else 'Inactive' }}{% if c.is_default %} · default{% endif %}</td>
+        <td class="row-actions">
+          <form method="post" action="/categories/{{ c.id }}/toggle">
+            <button type="submit" class="btn btn-secondary btn-sm">
+              {{ 'Deactivate' if c.active else 'Reactivate' }}
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="hint">Deactivating hides a category from dropdowns; existing expenses keep it.</p>
+</section>
+{% endblock %}
