@@ -1,12 +1,12 @@
 # Bill-Split Tracker
 
 Self-hosted monthly expense and bill-split tracker. Tracks expenses, splits them
-50/50 or 100%-hers, and shows a running "she owes" total per calendar month.
+50/50 or 100%, and shows a running split total per calendar month.
 No real money movement — calculation and reporting only.
 
 ## Features
 
-- **Dashboard** — headline "she owes" total, 50/50 vs 100%-hers breakdown, interactive
+- **Dashboard** — headline "Her" total, 50/50 vs 100% breakdown, interactive
   pie chart (hover for amounts, click a slice to filter the expense list), quick-add form,
   inline edit/delete.
 - **Categories** — seeded defaults plus add/rename/deactivate.
