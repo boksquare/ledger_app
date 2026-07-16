@@ -222,7 +222,11 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
   padding: var(--s2); box-shadow: var(--shadow);
 }
-.month-jump[open] > form { width: 300px; left: 0; right: auto; }
+/* Anchored under the ＋ button; app.js nudges it back in if it would leave the viewport. */
+.month-jump[open] > form {
+  width: 300px; left: 0; right: auto;
+  max-width: calc(100vw - 2 * var(--s2));
+}
 .month-jump > summary { font-weight: 600; }
 
 .rename-form { display: flex; gap: 4px; align-items: center; }
@@ -266,7 +270,8 @@ select.cell-input { width: auto; max-width: 100%; }
   .card.headline .card-value { font-size: clamp(2.25rem, 11vw, 3rem); }
   .page-head-actions { width: 100%; }
   .edit-popover[open] > form { position: fixed; left: var(--s2); right: var(--s2); width: auto; max-width: none; }
-  .month-jump[open] > form { position: fixed; left: var(--s2); right: var(--s2); width: auto; }
+  /* The month-jump popover stays anchored to its ＋ button (app.js keeps it on-screen). */
+  .month-jump[open] > form { position: absolute; left: 0; right: auto; width: 300px; max-width: calc(100vw - 2 * var(--s2)); }
 }
 @media (max-width: 480px) {
   .summary-cards { grid-template-columns: 1fr 1fr; }

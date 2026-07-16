@@ -18,7 +18,11 @@
     if (pie) { pie.destroy(); pie = null; }
     if (!dataEl || !canvas) return;
 
-    const { month, filter_category_id, slices } = JSON.parse(dataEl.textContent);
+    const cfg = JSON.parse(dataEl.textContent);
+    const { month, filter_category_id, slices } = cfg;
+    // Which list endpoint/container this chart filters (Her Spending overrides these).
+    const endpoint = cfg.endpoint || "/partials/expenses";
+    const target = cfg.target || "#dashboard-content";
 
     pie = new Chart(canvas, {
       type: "pie",
@@ -56,14 +60,36 @@
           const slice = slices[elements[0].index];
           const clearing = slice.category_id === filter_category_id;
           const url = clearing
-            ? `/partials/expenses?month=${month}`
-            : `/partials/expenses?month=${month}&category_id=${slice.category_id}`;
-          htmx.ajax("GET", url, { target: "#dashboard-content" });
+            ? `${endpoint}?month=${month}`
+            : `${endpoint}?month=${month}&category_id=${slice.category_id}`;
+          htmx.ajax("GET", url, { target });
         },
         onHover: (evt, elements) => {
           evt.native.target.style.cursor = elements.length ? "pointer" : "default";
         },
       },
+    });
+  }
+
+  // ---- Month-jump popover ----
+  // Anchored under its ＋ button, but nudged sideways just enough to stay on-screen.
+  function wireMonthJump() {
+    document.querySelectorAll("details.month-jump").forEach((d) => {
+      if (d.dataset.wired) return;
+      d.dataset.wired = "1";
+      d.addEventListener("toggle", () => {
+        const form = d.querySelector("form");
+        if (!d.open || !form) return;
+        form.style.transform = "";
+        const pad = 8;
+        // clientWidth excludes the scrollbar (which can appear as the popover opens).
+        const vw = document.documentElement.clientWidth;
+        const r = form.getBoundingClientRect();
+        let shift = 0;
+        if (r.right > vw - pad) shift = vw - pad - r.right;
+        if (r.left + shift < pad) shift = pad - r.left;
+        if (shift) form.style.transform = `translateX(${shift}px)`;
+      });
     });
   }
 
@@ -89,7 +115,11 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     wireThemeToggle();
+    wireMonthJump();
     initPie();
   });
-  document.body.addEventListener("htmx:afterSwap", () => initPie());
+  document.body.addEventListener("htmx:afterSwap", () => {
+    initPie();
+    wireMonthJump();
+  });
 })();

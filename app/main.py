@@ -23,6 +23,7 @@ async def lifespan(app: FastAPI):
     db.init_db()
     with db_conn() as conn:
         recurring.generate_due_instances(conn)
+        recurring.generate_due_wife_instances(conn)
     yield
 
 
@@ -359,6 +360,8 @@ def delete_recurring(rule_id: int):
 
 from . import statements  # noqa: E402  (registers /import routes)
 from . import export  # noqa: E402  (registers /export routes)
+from . import her_spending  # noqa: E402  (registers /her routes)
 
 app.include_router(statements.router)
 app.include_router(export.router)
+app.include_router(her_spending.router)

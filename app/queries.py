@@ -86,6 +86,73 @@ def active_categories(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     ).fetchall()
 
 
+# ---- "Her Spending" tab (isolated wife_* tables; shares only categories) ----
+
+def wife_month_expenses(conn: sqlite3.Connection, month: str, category_id: int | None = None) -> list[sqlite3.Row]:
+    """Her expenses in a YYYY-MM month, newest first, optionally filtered to one category."""
+    sql = """
+        SELECT e.*, c.name AS category_name
+        FROM wife_expenses e JOIN categories c ON c.id = e.category_id
+        WHERE substr(e.date, 1, 7) = ?
+    """
+    params: list = [month]
+    if category_id:
+        sql += " AND e.category_id = ?"
+        params.append(category_id)
+    sql += " ORDER BY e.date DESC, e.id DESC"
+    return conn.execute(sql, params).fetchall()
+
+
+def wife_month_total(conn: sqlite3.Connection, month: str) -> dict:
+    row = conn.execute(
+        """
+        SELECT COALESCE(SUM(amount), 0) AS total_spent, COUNT(*) AS expense_count
+        FROM wife_expenses WHERE substr(date, 1, 7) = ?
+        """,
+        (month,),
+    ).fetchone()
+    return {
+        "month": month,
+        "total_spent": round(row["total_spent"], 2),
+        "expense_count": row["expense_count"],
+    }
+
+
+def wife_category_breakdown(conn: sqlite3.Connection, month: str) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT c.id AS category_id, c.name, ROUND(SUM(e.amount), 2) AS total
+        FROM wife_expenses e JOIN categories c ON c.id = e.category_id
+        WHERE substr(e.date, 1, 7) = ?
+        GROUP BY c.id, c.name
+        ORDER BY total DESC
+        """,
+        (month,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def wife_months_with_expenses(conn: sqlite3.Connection) -> list[str]:
+    rows = conn.execute(
+        "SELECT DISTINCT substr(date, 1, 7) AS month FROM wife_expenses ORDER BY month DESC"
+    ).fetchall()
+    return [r["month"] for r in rows]
+
+
+def wife_distinct_descriptions(conn: sqlite3.Connection, limit: int = 200) -> list[str]:
+    rows = conn.execute(
+        """
+        SELECT description, COUNT(*) AS uses, MAX(date) AS last_used
+        FROM wife_expenses
+        GROUP BY description COLLATE NOCASE
+        ORDER BY uses DESC, last_used DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    return [r["description"] for r in rows]
+
+
 def get_or_create_category(conn: sqlite3.Connection, name: str) -> int:
     """Find a category by name (case-insensitive), reactivating or creating as needed."""
     name = name.strip()

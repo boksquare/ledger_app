@@ -9,6 +9,9 @@ No real money movement — calculation and reporting only.
 - **Dashboard** — headline "Her" total, 50/50 vs 100% breakdown, interactive
   pie chart (hover for amounts, click a slice to filter the expense list), quick-add form,
   inline edit/delete.
+- **Personal Tracker** — a fully isolated tab for her own personal spending (own tables,
+  never counted in the split math). Monthly total, pie chart, inline-editable expense
+  list, and inline-managed recurring entries. Categories are shared with the main tracker.
 - **Categories** — seeded defaults plus add/rename/deactivate.
 - **Recurring expenses** — rules auto-generate an expense on their day of month
   (clamped to month end, backfilled from `start_date`, idempotent).

@@ -77,6 +77,35 @@ CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
+
+-- "Her Spending" tab: fully isolated from the split tracker (separate tables so
+-- this data can never leak into the split math). Shares only `categories`.
+CREATE TABLE IF NOT EXISTS wife_recurring_expenses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    description TEXT NOT NULL,
+    amount REAL NOT NULL CHECK (amount > 0),
+    category_id INTEGER NOT NULL REFERENCES categories(id),
+    day_of_month INTEGER NOT NULL CHECK (day_of_month BETWEEN 1 AND 31),
+    active INTEGER NOT NULL DEFAULT 1,
+    start_date TEXT,
+    end_date TEXT
+);
+
+CREATE TABLE IF NOT EXISTS wife_expenses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    description TEXT NOT NULL,
+    amount REAL NOT NULL CHECK (amount > 0),
+    category_id INTEGER NOT NULL REFERENCES categories(id),
+    is_recurring_instance INTEGER NOT NULL DEFAULT 0,
+    recurring_id INTEGER REFERENCES wife_recurring_expenses(id),
+    notes TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_wife_expenses_recurring_month
+    ON wife_expenses (recurring_id, substr(date, 1, 7)) WHERE recurring_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_wife_expenses_date ON wife_expenses (date);
 """
 
 

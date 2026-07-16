@@ -8,7 +8,7 @@
     // Apply saved theme before CSS paints to avoid a light-mode flash.
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
   </script>
-  <link rel="stylesheet" href="/static/app.css?v=5">
+  <link rel="stylesheet" href="/static/app.css?v=8">
   <script src="/static/htmx.min.js"></script>
   <script src="/static/chart.umd.js"></script>
 </head>
@@ -16,6 +16,7 @@
   <nav class="topnav">
     <span class="brand">📒 Ledger</span>
     <a href="/">Dashboard</a>
+    <a href="/her">Personal Tracker</a>
     <a href="/history">History</a>
     <a href="/recurring">Recurring</a>
     <a href="/categories">Categories</a>
@@ -25,6 +26,6 @@
   <main>
     {% block content %}{% endblock %}
   </main>
-  <script src="/static/app.js?v=5"></script>
+  <script src="/static/app.js?v=8"></script>
 </body>
 </html>
