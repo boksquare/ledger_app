@@ -50,8 +50,9 @@ def export_excel(month: str):
     ws.append(["", "", "", "Total spending", s["total_spending"]])
     ws.append(["", "", "", "50/50 total", s["total_50_50"]])
     ws.append(["", "", "", "100% hers total", s["total_100_hers"]])
+    ws.append(["", "", "", "Prepaid deduction", "", -s["prepaid_deduction"]])
     ws.append(["", "", "", "HER TOTAL", "", s["her_owed"]])
-    for row in ws.iter_rows(min_row=ws.max_row - 3):
+    for row in ws.iter_rows(min_row=ws.max_row - 4):
         for cell in row:
             cell.font = Font(bold=True)
     for col, width in enumerate([12, 40, 18, 14, 12, 12, 30], start=1):
@@ -173,7 +174,8 @@ def export_pdf(month: str):
         Paragraph(f"${s['her_owed']:,.2f}", big),
         Paragraph(
             f"${s['half_share']:,.2f} (50% split)  +  ${s['total_100_hers']:,.2f} (100%)"
-            f"   ·   total spending ${s['total_spending']:,.2f}",
+            + (f"  −  ${s['prepaid_deduction']:,.2f} (prepaid)" if s["prepaid_deduction"] else "")
+            + f"   ·   total spending ${s['total_spending']:,.2f}",
             formula,
         ),
         Spacer(1, 6),

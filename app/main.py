@@ -91,6 +91,7 @@ def dashboard_context(conn: sqlite3.Connection, month: str, category_id: int | N
         "categories": queries.active_categories(conn),
         "descriptions": queries.distinct_descriptions(conn),
         "breakdown": queries.category_breakdown(conn, month),
+        "prepaid": queries.month_prepaid(conn, month),
         "filter_category_id": category_id,
         "today": date.today().isoformat(),
     }
@@ -228,6 +229,69 @@ def delete_expense(request: Request, expense_id: int, view_month: str):
     validate_month(view_month)
     with db_conn() as conn:
         conn.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
+        conn.commit()
+    return render_dashboard_content(request, view_month)
+
+
+# ---------- Prepaid (HTMX partials) ----------
+# Separate table; its share only reduces the her_owed total, never the split math.
+
+@app.post("/prepaid", response_class=HTMLResponse)
+def create_prepaid(
+    request: Request,
+    description: str = Form(),
+    amount: str = Form(),
+    split_type: str = Form(),
+    view_month: str = Form(),
+):
+    validate_month(view_month)
+    if not description.strip():
+        raise HTTPException(400, "Description is required")
+    with db_conn() as conn:
+        conn.execute(
+            "INSERT INTO prepaid_expenses (month, description, amount, split_type) VALUES (?, ?, ?, ?)",
+            (view_month, description.strip(), parse_amount(amount), validate_split(split_type)),
+        )
+        conn.commit()
+    return render_dashboard_content(request, view_month)
+
+
+PREPAID_EDITABLE = {"description", "amount", "split_type"}
+
+
+@app.post("/prepaid/{prepaid_id}/inline", response_class=HTMLResponse)
+async def inline_update_prepaid(
+    request: Request, prepaid_id: int, view_month: str, category_id: int | None = None,
+):
+    validate_month(view_month)
+    form = await request.form()
+    fields = {k: v for k, v in form.items() if k in PREPAID_EDITABLE}
+    if not fields:
+        raise HTTPException(400, "No editable field submitted")
+    field, value = next(iter(fields.items()))
+    if field == "amount":
+        value = parse_amount(str(value))
+    elif field == "split_type":
+        value = validate_split(str(value))
+    else:  # description
+        value = str(value).strip()
+        if not value:
+            raise HTTPException(400, "Description cannot be empty")
+    with db_conn() as conn:
+        cur = conn.execute(
+            f"UPDATE prepaid_expenses SET {field} = ? WHERE id = ?", (value, prepaid_id)
+        )
+        if cur.rowcount == 0:
+            raise HTTPException(404, "Prepaid entry not found")
+        conn.commit()
+    return render_dashboard_content(request, view_month, category_id)
+
+
+@app.delete("/prepaid/{prepaid_id}", response_class=HTMLResponse)
+def delete_prepaid(request: Request, prepaid_id: int, view_month: str):
+    validate_month(view_month)
+    with db_conn() as conn:
+        conn.execute("DELETE FROM prepaid_expenses WHERE id = ?", (prepaid_id,))
         conn.commit()
     return render_dashboard_content(request, view_month)
 

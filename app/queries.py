@@ -18,7 +18,8 @@ def month_expenses(conn: sqlite3.Connection, month: str, category_id: int | None
 
 
 def month_summary(conn: sqlite3.Connection, month: str) -> dict:
-    """Split totals for a month per spec §5: her_owed = 50% of 50_50 + 100% of 100_hers."""
+    """Split totals for a month per spec §5: her_owed = 50% of 50_50 + 100% of 100_hers,
+    minus the month's prepaid deduction (see prepaid_expenses)."""
     row = conn.execute(
         """
         SELECT
@@ -31,15 +32,42 @@ def month_summary(conn: sqlite3.Connection, month: str) -> dict:
         (month,),
     ).fetchone()
     half_share = round(row["total_50_50"] * 0.5, 2)
+    her_owed_gross = round(half_share + row["total_100_hers"], 2)
+    prepaid_deduction = month_prepaid_deduction(conn, month)
     return {
         "month": month,
         "half_share": half_share,
         "total_50_50": round(row["total_50_50"], 2),
         "total_100_hers": round(row["total_100_hers"], 2),
         "total_spending": round(row["total_spending"], 2),
-        "her_owed": round(half_share + row["total_100_hers"], 2),
+        "her_owed_gross": her_owed_gross,
+        "prepaid_deduction": prepaid_deduction,
+        "her_owed": round(her_owed_gross - prepaid_deduction, 2),
         "expense_count": row["expense_count"],
     }
+
+
+def month_prepaid(conn: sqlite3.Connection, month: str) -> list[sqlite3.Row]:
+    """Prepaid entries for a month, each with its computed deduction share."""
+    return conn.execute(
+        """
+        SELECT *,
+               ROUND(CASE WHEN split_type = '50_50' THEN amount * 0.5 ELSE amount END, 2) AS deduction
+        FROM prepaid_expenses WHERE month = ? ORDER BY id DESC
+        """,
+        (month,),
+    ).fetchall()
+
+
+def month_prepaid_deduction(conn: sqlite3.Connection, month: str) -> float:
+    row = conn.execute(
+        """
+        SELECT COALESCE(SUM(CASE WHEN split_type = '50_50' THEN amount * 0.5 ELSE amount END), 0) AS d
+        FROM prepaid_expenses WHERE month = ?
+        """,
+        (month,),
+    ).fetchone()
+    return round(row["d"], 2)
 
 
 def category_breakdown(conn: sqlite3.Connection, month: str) -> list[dict]:

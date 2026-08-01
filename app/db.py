@@ -106,6 +106,18 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_wife_expenses_recurring_month
     ON wife_expenses (recurring_id, substr(date, 1, 7)) WHERE recurring_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_wife_expenses_date ON wife_expenses (date);
+
+-- Prepaid deductions: separate table so these can never enter the split math.
+-- Their share (50% or 100% of amount) is subtracted from the month's her_owed total.
+CREATE TABLE IF NOT EXISTS prepaid_expenses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    month TEXT NOT NULL,
+    description TEXT NOT NULL,
+    amount REAL NOT NULL CHECK (amount > 0),
+    split_type TEXT NOT NULL CHECK (split_type IN ('50_50','100_hers'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_prepaid_month ON prepaid_expenses (month);
 """
 
 

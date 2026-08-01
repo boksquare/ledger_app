@@ -2,7 +2,7 @@
   <div class="card headline">
     <div class="card-label">Her Total</div>
     <div class="card-value">{{ summary.her_owed | usd }}</div>
-    <div class="card-sub">{{ summary.half_share | usd }} (50% split) + {{ summary.total_100_hers | usd }} (100%)</div>
+    <div class="card-sub">{{ summary.half_share | usd }} (50% split) + {{ summary.total_100_hers | usd }} (100%){% if summary.prepaid_deduction %} − {{ summary.prepaid_deduction | usd }} (prepaid){% endif %}</div>
   </div>
   <div class="card">
     <div class="card-label">50% split</div>
@@ -19,7 +19,7 @@
   </div>
 </section>
 
-<div class="dash-grid">
+<div class="dash-grid with-prepaid">
   <section class="panel chart-panel">
     <h2>Spending by category</h2>
     {% if breakdown %}
@@ -127,5 +127,51 @@
         {% endfor %}
       </tbody>
     </table>
+  </section>
+
+  <section class="panel prepaid-panel">
+    <h2>Prepaid</h2>
+    <form hx-post="/prepaid" hx-target="#dashboard-content" class="expense-form">
+      <input type="hidden" name="view_month" value="{{ month }}">
+      <label>Description <input type="text" name="description" required></label>
+      <div class="form-row">
+        <label>Amount <input type="number" name="amount" step="0.01" min="0.01" placeholder="0.00" required></label>
+        <label>Split
+          <select name="split_type">
+            <option value="50_50">50%</option>
+            <option value="100_hers">100%</option>
+          </select>
+        </label>
+      </div>
+      <button type="submit" class="btn btn-primary">Add</button>
+    </form>
+
+    <div class="prepaid-list">
+      {% for p in prepaid %}
+      <div class="prepaid-item" id="prepaid-row-{{ p.id }}">
+        <input type="text" name="description" value="{{ p.description }}" class="cell-input"
+               hx-post="/prepaid/{{ p.id }}/inline?view_month={{ month }}{% if filter_category_id %}&category_id={{ filter_category_id }}{% endif %}"
+               hx-trigger="change" hx-target="#dashboard-content">
+        <div class="prepaid-item-controls">
+          <select name="split_type" class="cell-input"
+                  hx-post="/prepaid/{{ p.id }}/inline?view_month={{ month }}{% if filter_category_id %}&category_id={{ filter_category_id }}{% endif %}"
+                  hx-trigger="change" hx-target="#dashboard-content">
+            <option value="50_50" {% if p.split_type == '50_50' %}selected{% endif %}>50%</option>
+            <option value="100_hers" {% if p.split_type == '100_hers' %}selected{% endif %}>100%</option>
+          </select>
+          <input type="number" step="0.01" min="0.01" name="amount" value="{{ '%.2f' | format(p.amount) }}"
+                 class="cell-input amount-input"
+                 hx-post="/prepaid/{{ p.id }}/inline?view_month={{ month }}{% if filter_category_id %}&category_id={{ filter_category_id }}{% endif %}"
+                 hx-trigger="change" hx-target="#dashboard-content">
+          <button class="icon-btn danger" title="Delete"
+                  hx-delete="/prepaid/{{ p.id }}?view_month={{ month }}"
+                  hx-confirm="Delete prepaid “{{ p.description }}” ({{ p.amount | usd }})?"
+                  hx-target="#dashboard-content">🗑</button>
+        </div>
+      </div>
+      {% else %}
+      <p class="empty">No prepaid items.</p>
+      {% endfor %}
+    </div>
   </section>
 </div>

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ month }} — Ledger{% endblock %}
+{% block main_class %}main-wide{% endblock %}
 {% block content %}
 <div class="page-head">
   <h1>{% if month == current_month %}This Month{% else %}{{ month | monthname }}{% endif %}</h1>
