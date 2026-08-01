@@ -2,8 +2,14 @@
 import sqlite3
 
 
-def month_expenses(conn: sqlite3.Connection, month: str, category_id: int | None = None) -> list[sqlite3.Row]:
-    """All expenses in a YYYY-MM month, newest first, optionally filtered to one category."""
+def month_expenses(
+    conn: sqlite3.Connection, month: str, category_id: int | None = None,
+    order: str = "added",
+) -> list[sqlite3.Row]:
+    """All expenses in a YYYY-MM month, optionally filtered to one category.
+
+    order="added": newest-added first (insertion order, id DESC) — dashboard list.
+    order="date":  chronological by expense date — exports/reports."""
     sql = """
         SELECT e.*, c.name AS category_name
         FROM expenses e JOIN categories c ON c.id = e.category_id
@@ -13,7 +19,7 @@ def month_expenses(conn: sqlite3.Connection, month: str, category_id: int | None
     if category_id:
         sql += " AND e.category_id = ?"
         params.append(category_id)
-    sql += " ORDER BY e.date DESC, e.id DESC"
+    sql += " ORDER BY e.id DESC" if order == "added" else " ORDER BY e.date DESC, e.id DESC"
     return conn.execute(sql, params).fetchall()
 
 

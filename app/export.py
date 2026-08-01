@@ -18,7 +18,7 @@ def _month_data(month: str) -> dict:
     conn = db.get_db()
     try:
         return {
-            "expenses": queries.month_expenses(conn, month),
+            "expenses": queries.month_expenses(conn, month, order="date"),
             "summary": queries.month_summary(conn, month),
             "breakdown": queries.category_breakdown(conn, month),
         }
