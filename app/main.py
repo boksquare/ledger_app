@@ -7,7 +7,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -34,6 +34,12 @@ templates.env.filters["usd"] = lambda v: f"${v:,.2f}"
 templates.env.filters["monthname"] = (
     lambda m: datetime.strptime(m, "%Y-%m").strftime("%B %Y")
 )
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Browsers probe /favicon.ico regardless of the <link> tag — serve the SVG."""
+    return FileResponse(BASE_DIR / "static" / "favicon.svg", media_type="image/svg+xml")
 
 
 @contextmanager
