@@ -39,7 +39,15 @@
           {% if si.imported_count %}<span class="status-pill imported">{{ si.imported_count }} imported</span>{% endif %}
           {% if si.discarded_count %}<span class="status-pill discarded">{{ si.discarded_count }} discarded</span>{% endif %}
         </td>
-        <td><a class="btn btn-secondary btn-sm" href="/import/{{ si.id }}">Review</a></td>
+        <td>
+          <a class="btn btn-secondary btn-sm" href="/import/{{ si.id }}">Review</a>
+          {% if si.pending_count %}
+          <form method="post" action="/import/{{ si.id }}/cancel" style="display:inline"
+                onsubmit="return confirm('Cancel this import? {{ si.pending_count }} pending transaction{{ 's' if si.pending_count != 1 else '' }} will be discarded.');">
+            <button type="submit" class="btn btn-danger btn-sm">Cancel</button>
+          </form>
+          {% endif %}
+        </td>
       </tr>
       {% else %}
       <tr><td colspan="6" class="empty">No statements uploaded yet.</td></tr>

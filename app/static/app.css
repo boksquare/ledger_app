@@ -189,6 +189,8 @@ main.main-wide { max-width: 1380px; }
 .btn-primary:hover { filter: brightness(1.12); }
 .btn-secondary { background: var(--panel); border-color: var(--line); color: var(--ink); }
 .btn-secondary:hover { background: var(--hover); }
+.btn-danger { background: var(--panel); border-color: var(--danger); color: var(--danger); }
+.btn-danger:hover { background: var(--flash-err); }
 .btn-sm { padding: 2px var(--s1); font-size: 0.8rem; }
 
 .icon-btn {

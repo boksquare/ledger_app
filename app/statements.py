@@ -277,3 +277,50 @@ async def confirm_import(request: Request, import_id: int):
         msg += f" ({skipped} skipped: amount must be positive)"
     from urllib.parse import quote
     return RedirectResponse(f"/import/{import_id}?ok={quote(msg)}", status_code=303)
+
+
+@router.post("/import/{import_id}/cancel")
+def cancel_import(request: Request, import_id: int):
+    from urllib.parse import quote
+
+    conn = db.get_db()
+    try:
+        imp = conn.execute(
+            "SELECT * FROM statement_imports WHERE id = ?", (import_id,)
+        ).fetchone()
+        if not imp:
+            raise HTTPException(404, "Statement not found")
+
+        imported_count = conn.execute(
+            """
+            SELECT COUNT(*) AS n FROM staged_transactions
+            WHERE statement_import_id = ? AND status = 'imported'
+            """,
+            (import_id,),
+        ).fetchone()["n"]
+
+        # Pending (and any already-discarded) rows are always safe to drop.
+        conn.execute(
+            "DELETE FROM staged_transactions WHERE statement_import_id = ? AND status != 'imported'",
+            (import_id,),
+        )
+
+        if imported_count:
+            # Some rows were already confirmed into real expenses, which reference
+            # this statement_imports row — keep it (and the file) so that link holds.
+            conn.commit()
+            msg = quote(
+                f"Canceled remaining pending rows. {imported_count} transaction"
+                f"{'s' if imported_count != 1 else ''} already imported from this "
+                f"statement {'were' if imported_count != 1 else 'was'} kept."
+            )
+            return RedirectResponse(f"/import/{import_id}?ok={msg}", status_code=303)
+
+        conn.execute("DELETE FROM statement_imports WHERE id = ?", (import_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+    Path(imp["original_file_path"]).unlink(missing_ok=True)
+    msg = quote(f"Canceled import of {imp['uploaded_filename']}")
+    return RedirectResponse(f"/import?ok={msg}", status_code=303)
