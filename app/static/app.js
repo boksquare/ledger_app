@@ -122,4 +122,21 @@
     initPie();
     wireMonthJump();
   });
+
+  // ---- Keep scroll position across htmx swaps ----
+  // Inline edits/deletes re-render and swap the whole #dashboard-content /
+  // #her-content block (chart + table + forms). Without this, the browser can
+  // lose its place — settle on afterSettle, then again next frame to absorb
+  // any late reflow from the chart re-rendering.
+  let savedScrollY = null;
+  document.body.addEventListener("htmx:beforeSwap", () => {
+    savedScrollY = window.scrollY;
+  });
+  document.body.addEventListener("htmx:afterSettle", () => {
+    if (savedScrollY === null) return;
+    const y = savedScrollY;
+    savedScrollY = null;
+    window.scrollTo(0, y);
+    requestAnimationFrame(() => window.scrollTo(0, y));
+  });
 })();
