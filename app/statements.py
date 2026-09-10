@@ -1,5 +1,6 @@
 """Statement upload, parsing, staging/review, and confirm-import (spec §6 + §9)."""
 import re
+import sqlite3
 import time
 from pathlib import Path
 
@@ -191,6 +192,23 @@ async def upload_statements(request: Request):
     return RedirectResponse(f"/import{query}", status_code=303)
 
 
+def _target_month(imp: sqlite3.Row, txns: list[sqlite3.Row]) -> str | None:
+    """The YYYY-MM a pending row must fall in to be pre-checked for import.
+
+    Anchored on the statement's own closing date (statement_period_end), not
+    today's date — a statement's billing cycle rarely lines up with a calendar
+    month (e.g. 08/18-09/17), and its closing date is what tells us which month
+    this statement's data actually belongs to, regardless of when it gets
+    uploaded. Falls back to the latest extracted transaction date if the
+    closing date wasn't parsed.
+    """
+    period_end = imp["statement_period_end"]
+    if period_end:
+        return period_end[:7]
+    dates = [t["date"] for t in txns if t["date"]]
+    return max(dates)[:7] if dates else None
+
+
 @router.get("/import/{import_id}", response_class=HTMLResponse)
 def review_page(request: Request, import_id: int, error: str = "", ok: str = "", warn: str = ""):
     conn = db.get_db()
@@ -215,7 +233,7 @@ def review_page(request: Request, import_id: int, error: str = "", ok: str = "",
         conn.close()
     return _templates().TemplateResponse(
         request, "import_review.html",
-        {"imp": imp, "txns": txns, "categories": cats,
+        {"imp": imp, "txns": txns, "categories": cats, "target_month": _target_month(imp, txns),
          "error": error, "ok": ok, "warn": warn},
     )
 

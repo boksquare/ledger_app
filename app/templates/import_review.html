@@ -29,9 +29,13 @@
       </thead>
       <tbody>
         {% for t in pending %}
+        {% set in_target_month = not target_month or t.date[:7] == target_month %}
         <tr>
-          <td><input type="checkbox" class="row-check" name="selected_{{ t.id }}" {% if t.amount > 0 %}checked{% endif %}></td>
-          <td><input type="date" name="date_{{ t.id }}" value="{{ t.date }}"></td>
+          <td><input type="checkbox" class="row-check" name="selected_{{ t.id }}" {% if t.amount > 0 and in_target_month %}checked{% endif %}></td>
+          <td>
+            <input type="date" name="date_{{ t.id }}" value="{{ t.date }}">
+            {% if not in_target_month %}<div class="note">outside {{ target_month | monthname }} — edit or leave unchecked</div>{% endif %}
+          </td>
           <td><input type="text" name="description_{{ t.id }}" value="{{ t.description }}" style="width:100%"></td>
           <td class="num">
             <input type="number" step="0.01" name="amount_{{ t.id }}" value="{{ '%.2f' | format(t.amount) }}" style="width:6.5rem">
