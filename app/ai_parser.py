@@ -80,9 +80,18 @@ def _extract_json_object(text: str) -> dict:
     if start == -1 or end <= start:
         raise AIParsingError("The AI's reply contained no JSON object; try re-uploading.")
     try:
-        return json.loads(text[start:end + 1])
+        obj = json.loads(text[start:end + 1])
     except json.JSONDecodeError:
         raise AIParsingError("The AI returned malformed data; try re-uploading.")
+    # A weaker model can return well-formed JSON that isn't remotely our schema (e.g. a
+    # summary of statement terms) — catch that here rather than silently "succeeding"
+    # with zero transactions and no fallback to the native parser.
+    if not isinstance(obj, dict) or not isinstance(obj.get("transactions"), list):
+        raise AIParsingError(
+            "The AI's reply was valid JSON but didn't match the expected shape "
+            "(no transactions list); try re-uploading."
+        )
+    return obj
 
 
 def _require_env(name: str, provider: str, example: str = "") -> str:
@@ -209,6 +218,12 @@ def _chat_completion(base_url: str, api_key: str, model: str, prompt: str) -> st
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
         "max_tokens": MAX_OUTPUT_TOKENS,
+        # Ask the server to enforce valid JSON syntax rather than relying on the model to
+        # follow the prompt's instruction on its own — smaller/weaker models otherwise
+        # sometimes answer in plain prose instead. Widely supported (OpenAI, most
+        # vLLM-backed NIM models, recent Ollama); a provider that rejects this field just
+        # errors, which falls back to the native parser the same as any other failure.
+        "response_format": {"type": "json_object"},
     }
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
     data = _post_json(url, headers, payload)
@@ -247,7 +262,11 @@ def _parse_via_gemini(prompt: str) -> str:
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0, "maxOutputTokens": MAX_OUTPUT_TOKENS},
+        "generationConfig": {
+            "temperature": 0,
+            "maxOutputTokens": MAX_OUTPUT_TOKENS,
+            "responseMimeType": "application/json",
+        },
     }
     data = _post_json(url, {"x-goog-api-key": api_key}, payload)
     try:
