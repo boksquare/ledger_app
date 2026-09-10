@@ -120,6 +120,12 @@ shape: Groq, Together, Mistral, a local Ollama/LM Studio server, etc.
 | `OPENAI_COMPAT_API_KEY` | — | Sent as a bearer token if set; leave blank for a local server that doesn't need one. |
 | `LEDGER_AI_MODEL` | — | Required — e.g. `gpt-4o-mini`. |
 
+All three of the above (`nvidia_nim`, `gemini`, `openai_compatible`) share one more setting:
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `LEDGER_AI_HTTP_TIMEOUT` | `180` (seconds) | How long to wait before falling back to the built-in parser. Free-tier hosted endpoints can have tens of seconds of queuing/cold-start latency before generation even starts — raise this if a provider that does eventually respond keeps hitting "AI provider took too long to respond." |
+
 ## Notes
 
 - Billing cycle is the calendar month (1st–end). Currency is USD.
