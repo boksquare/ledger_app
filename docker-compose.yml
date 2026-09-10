@@ -7,14 +7,23 @@ services:
     volumes:
       - bills_data:/data
     environment:
-      # Required only for Phase 5 statement parsing. Uses your Claude Pro/Max
-      # subscription — on any machine with Claude Code, run `claude setup-token`
-      # and put CLAUDE_CODE_OAUTH_TOKEN=... in a .env file next to this compose file.
-      - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
-      # Optional: pick the model/effort used for statement parsing
-      # (e.g. LEDGER_AI_MODEL=sonnet, LEDGER_AI_EFFORT=low)
+      # Statement parsing (optional feature). LEDGER_AI_PROVIDER picks which of these
+      # is active: claude_code (default), nvidia_nim, gemini, or openai_compatible.
+      # See README's Configuration section for what each provider needs.
+      - LEDGER_AI_PROVIDER=${LEDGER_AI_PROVIDER:-claude_code}
       - LEDGER_AI_MODEL=${LEDGER_AI_MODEL:-}
       - LEDGER_AI_EFFORT=${LEDGER_AI_EFFORT:-}
+      # claude_code — subscription-based, no API key. On any machine with Claude Code,
+      # run `claude setup-token` and put CLAUDE_CODE_OAUTH_TOKEN=... in .env.
+      - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
+      # nvidia_nim
+      - NVIDIA_NIM_API_KEY=${NVIDIA_NIM_API_KEY:-}
+      - NVIDIA_NIM_BASE_URL=${NVIDIA_NIM_BASE_URL:-}
+      # gemini
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      # openai_compatible — OpenAI itself, or any provider/local server with the same API shape
+      - OPENAI_COMPAT_API_KEY=${OPENAI_COMPAT_API_KEY:-}
+      - OPENAI_COMPAT_BASE_URL=${OPENAI_COMPAT_BASE_URL:-}
     restart: unless-stopped
 
 volumes:

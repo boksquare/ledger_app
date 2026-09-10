@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.datastructures import UploadFile
 
 from . import db, queries
-from .claude_parser import ClaudeParsingError, parse_statement_text
+from .ai_parser import AIParsingError, parse_statement_text
 from .native_parser import parse_statement_native
 
 router = APIRouter()
@@ -135,18 +135,18 @@ async def upload_statements(request: Request):
                 continue
             try:
                 parsed = parse_statement_text(text, cat_names)
-            except ClaudeParsingError as claude_err:
+            except AIParsingError as ai_err:
                 # AI unavailable or failed — fall back to the built-in parser.
                 try:
                     parsed = parse_statement_native(dest, text, cat_names)
                     warnings.append(
-                        f"{upload.filename}: Claude was unavailable, so the built-in "
+                        f"{upload.filename}: AI parsing was unavailable, so the built-in "
                         f"parser was used instead — double-check dates, amounts, and "
-                        f"categories before confirming. (Claude error: {claude_err})"
+                        f"categories before confirming. (AI provider error: {ai_err})"
                     )
                 except ValueError as native_err:
                     errors.append(
-                        f"{upload.filename}: {claude_err} The built-in fallback "
+                        f"{upload.filename}: {ai_err} The built-in fallback "
                         f"couldn't parse it either ({native_err})."
                     )
                     dest.unlink(missing_ok=True)

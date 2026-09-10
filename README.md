@@ -19,11 +19,13 @@ No real money movement — calculation and reporting only.
 - **Export** — Excel (native embedded pie chart, interactive in Excel) and PDF
   (rendered chart image + itemized table).
 - **Statement import** — upload PDF, CSV, or Excel (.xlsx) statements; text is extracted
-  locally (pdfplumber/openpyxl) and structured by Claude into transactions with suggested categories.
+  locally (pdfplumber/openpyxl) and structured by AI into transactions with suggested categories.
   Review/edit/select in a staging table, then confirm — nothing counts until confirmed.
   Scanned (image-only) PDFs are detected and rejected with a clear message.
-  Parsing runs through Claude Code's headless mode (`claude -p`) using your **Claude
-  Pro/Max subscription** — no API key or per-token billing.
+  Pick the AI provider with `LEDGER_AI_PROVIDER`: **Claude Code** (default — your Claude
+  Pro/Max subscription, no API key), **NVIDIA NIM**, **Google Gemini**, or any
+  **OpenAI-compatible** API/local server. If the configured provider is unavailable, a
+  built-in offline parser is used instead (with a warning to double-check the results).
 
 ## Run locally (development)
 
@@ -77,14 +79,46 @@ by anyone.
 | Env var | Default | Purpose |
 |---|---|---|
 | `DATA_DIR` | `./data` (repo) / `/data` (Docker) | Where the SQLite DB and statements live |
-| `CLAUDE_CODE_OAUTH_TOKEN` | — | Subscription auth for headless Claude Code in Docker (from `claude setup-token`). Not needed locally if `claude` is already signed in. |
-| `CLAUDE_CLI` | auto-detected | Full path to the `claude` binary if it isn't on PATH (on Windows the desktop-app bundle is found automatically) |
-| `LEDGER_AI_MODEL` | Claude Code default | Model for statement parsing: an alias (`sonnet`, `opus`, `haiku`, `fable`) or full model id. `sonnet` is plenty for extraction and lighter on subscription usage. |
-| `LEDGER_AI_EFFORT` | Claude Code default | Effort level for statement parsing: `low`, `medium`, `high`, `xhigh`, or `max`. `low`/`medium` recommended — parsing is extraction, not reasoning. |
+| `LEDGER_AI_PROVIDER` | `claude_code` | Which AI provider does statement parsing: `claude_code`, `nvidia_nim`, `gemini`, or `openai_compatible`. |
 
-Statement parsing is the only feature that talks to Claude; everything else works
-offline. Usage draws from your subscription's shared limit pool, same as chatting
-in the app.
+Statement parsing is the only feature that talks to an AI provider; everything else works
+offline. Each provider needs its own env vars, below — only fill in the block for the one
+you're using (see `.env.example`).
+
+**`claude_code`** (default) — subscription-based, no API key or per-token billing.
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `CLAUDE_CODE_OAUTH_TOKEN` | — | Subscription auth for headless Claude Code in Docker (from `claude setup-token`). Not needed locally if `claude` is already signed in. |
+| `CLAUDE_CLI` | auto-detected | Full path to the `claude` binary if it isn't on PATH (on Windows the desktop-app bundle is found automatically). |
+| `LEDGER_AI_MODEL` | Claude Code default | An alias (`sonnet`, `opus`, `haiku`, `fable`) or full model id. `sonnet` is plenty for extraction and lighter on subscription usage. |
+| `LEDGER_AI_EFFORT` | Claude Code default | `low`, `medium`, `high`, `xhigh`, or `max`. `low`/`medium` recommended — parsing is extraction, not reasoning. |
+
+Usage draws from your subscription's shared limit pool, same as chatting in the app.
+
+**`nvidia_nim`** — [build.nvidia.com](https://build.nvidia.com) API key, or a self-hosted NIM container.
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `NVIDIA_NIM_API_KEY` | — | Required. |
+| `NVIDIA_NIM_BASE_URL` | `https://integrate.api.nvidia.com/v1` | Point at a self-hosted NIM instance instead if you're running one. |
+| `LEDGER_AI_MODEL` | — | Required — e.g. `meta/llama-3.1-70b-instruct`. See the model catalog at build.nvidia.com. |
+
+**`gemini`** — [Google AI Studio](https://aistudio.google.com/apikey) API key.
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `GEMINI_API_KEY` | — | Required. |
+| `LEDGER_AI_MODEL` | — | Required — e.g. `gemini-2.0-flash`. See [ai.google.dev](https://ai.google.dev/gemini-api/docs/models) for current model ids. |
+
+**`openai_compatible`** — OpenAI itself, or anything speaking the same `/chat/completions`
+shape: Groq, Together, Mistral, a local Ollama/LM Studio server, etc.
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `OPENAI_COMPAT_BASE_URL` | — | Required — e.g. `https://api.openai.com/v1`, or your provider's/local server's base URL. |
+| `OPENAI_COMPAT_API_KEY` | — | Sent as a bearer token if set; leave blank for a local server that doesn't need one. |
+| `LEDGER_AI_MODEL` | — | Required — e.g. `gpt-4o-mini`. |
 
 ## Notes
 
