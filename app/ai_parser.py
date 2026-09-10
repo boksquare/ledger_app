@@ -12,7 +12,8 @@ import subprocess
 import urllib.error
 import urllib.request
 
-TIMEOUT_SECONDS = 600
+TIMEOUT_SECONDS = 600  # Claude Code CLI — a subprocess, includes its own startup overhead
+HTTP_TIMEOUT_SECONDS = 120  # NIM/Gemini/OpenAI-compatible — a single direct API call
 
 OUTPUT_SPEC = """{
   "card_name": "string or null — card/account name as shown on the statement",
@@ -164,7 +165,7 @@ def _post_json(url: str, headers: dict, payload: dict) -> dict:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT_SECONDS) as resp:
+        with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_SECONDS) as resp:
             return json.loads(resp.read())
     except urllib.error.HTTPError as e:
         detail = e.read().decode(errors="replace")[:500]

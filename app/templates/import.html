@@ -15,7 +15,7 @@
       <input type="file" name="statements" accept=".pdf,.csv,.xlsx,.xlsm,.xls" multiple required>
     </div>
     <button type="submit" class="btn btn-primary"
-            onclick="this.textContent='Parsing with Claude… (this can take a minute)'; this.disabled=true; this.form.submit();">
+            onclick="this.disabled=true; this.innerHTML='&lt;span class=&quot;spinner&quot;&gt;&lt;/span&gt; Parsing…'; this.form.submit();">
       Upload &amp; Parse
     </button>
   </form>

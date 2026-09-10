@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.datastructures import UploadFile
 
@@ -129,17 +130,21 @@ async def upload_statements(request: Request):
             dest.write_bytes(await upload.read())
 
             try:
-                text = extract_text(dest)
+                # extract_text and parse_statement_text/native are blocking (file I/O,
+                # subprocess, or a network call that can take minutes) — running them
+                # inline would freeze the whole app's event loop for every user, not
+                # just this request, until they returned.
+                text = await run_in_threadpool(extract_text, dest)
             except ValueError as e:
                 errors.append(f"{upload.filename}: {e}")
                 dest.unlink(missing_ok=True)
                 continue
             try:
-                parsed = parse_statement_text(text, cat_names)
+                parsed = await run_in_threadpool(parse_statement_text, text, cat_names)
             except AIParsingError as ai_err:
                 # AI unavailable or failed — fall back to the built-in parser.
                 try:
-                    parsed = parse_statement_native(dest, text, cat_names)
+                    parsed = await run_in_threadpool(parse_statement_native, dest, text, cat_names)
                     warnings.append(
                         f"{upload.filename}: AI parsing was unavailable, so the built-in "
                         f"parser was used instead — double-check dates, amounts, and "
