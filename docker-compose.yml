@@ -1,6 +1,6 @@
 services:
   bills-app:
-    build: .
+    image: ghcr.io/boksquare/ledger_app:latest
     container_name: bills-app
     ports:
       - "8321:8000"

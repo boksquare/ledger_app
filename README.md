@@ -38,17 +38,29 @@ Open http://localhost:8000. Data lives in `./data/` (SQLite file + uploaded stat
 
 ## Deploy with Docker
 
+Images are built and published to GHCR by [a GitHub Actions workflow](.github/workflows/docker-publish.yml)
+on every push to `main` — the server just pulls, it never builds.
+
 ```sh
 # optional — only needed for statement import. On any machine where Claude Code
 # is signed in with your Pro/Max account, run `claude setup-token`, then:
 echo "CLAUDE_CODE_OAUTH_TOKEN=<token from claude setup-token>" > .env
 
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
+To update after a new push, just re-run those two commands — no git clone/pull needed
+on the server at all.
+
 Open `http://<server-ip>:8321`. The SQLite database and uploaded statements persist
-in the named volume `bills_data` (mounted at `/data`), so they survive rebuilds.
+in the named volume `bills_data` (mounted at `/data`), so they survive updates.
 Back up by copying `/data/expenses.db` out of the volume.
+
+**One-time setup:** GHCR packages are private by default even in a public repo. After
+the workflow's first successful run, open the package on GitHub
+(`https://github.com/boksquare/ledger_app/pkgs/container/ledger_app` → Package settings)
+and change its visibility to Public, so the home server can pull without authenticating.
 
 ## Configuration
 
