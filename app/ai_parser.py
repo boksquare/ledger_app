@@ -9,6 +9,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 import urllib.error
 import urllib.request
 
@@ -256,5 +257,12 @@ def parse_statement_text(text: str, category_names: list[str]) -> dict:
     prompt = PROMPT.format(
         categories=", ".join(category_names), output_spec=OUTPUT_SPEC, text=text,
     )
-    reply = provider_fn(prompt)
+    started = time.monotonic()
+    print(f"[ai_parser] {provider_name}: starting ({len(text)} chars of statement text)", flush=True)
+    try:
+        reply = provider_fn(prompt)
+    except AIParsingError as e:
+        print(f"[ai_parser] {provider_name}: failed after {time.monotonic() - started:.1f}s — {e}", flush=True)
+        raise
+    print(f"[ai_parser] {provider_name}: succeeded in {time.monotonic() - started:.1f}s", flush=True)
     return _extract_json_object(reply)
