@@ -34,6 +34,37 @@ OUTPUT_SPEC = """{
   ]
 }"""
 
+# A real JSON Schema (not just OUTPUT_SPEC's prose description) for providers that support
+# schema-constrained generation — this is a much stronger guarantee than asking the model to
+# please match a shape described in English, since generation is grammar-constrained to it
+# token-by-token rather than left to the model's own compliance. Standard JSON Schema
+# conventions (lowercase types, nullable via a type array) work identically for OpenAI/NIM/
+# Ollama's response_format.json_schema.schema and Gemini's generationConfig.responseSchema.
+TRANSACTIONS_JSON_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "card_name": {"type": ["string", "null"]},
+        "period_start": {"type": ["string", "null"]},
+        "period_end": {"type": ["string", "null"]},
+        "transactions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "date": {"type": "string"},
+                    "description": {"type": "string"},
+                    "amount": {"type": "number"},
+                    "suggested_category": {"type": ["string", "null"]},
+                },
+                "required": ["date", "description", "amount", "suggested_category"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["card_name", "period_start", "period_end", "transactions"],
+    "additionalProperties": False,
+}
+
 PROMPT = """Below is the raw text extracted from a credit card or bank statement (PDF text \
 extraction or CSV). Extract every purchase/charge transaction into structured form.
 
@@ -218,12 +249,20 @@ def _chat_completion(base_url: str, api_key: str, model: str, prompt: str) -> st
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
         "max_tokens": MAX_OUTPUT_TOKENS,
-        # Ask the server to enforce valid JSON syntax rather than relying on the model to
-        # follow the prompt's instruction on its own — smaller/weaker models otherwise
-        # sometimes answer in plain prose instead. Widely supported (OpenAI, most
-        # vLLM-backed NIM models, recent Ollama); a provider that rejects this field just
-        # errors, which falls back to the native parser the same as any other failure.
-        "response_format": {"type": "json_object"},
+        # Constrain generation to our actual schema, not just "some valid JSON" — a
+        # weaker model can satisfy json_object mode while still answering with a
+        # differently-shaped object (a summary, say) instead of our transactions list.
+        # Supported by OpenAI, vLLM-backed NIM models, and Ollama's OpenAI-compat layer.
+        # A provider/model that rejects this field just errors, which falls back to the
+        # native parser the same as any other failure.
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "statement_extraction",
+                "strict": True,
+                "schema": TRANSACTIONS_JSON_SCHEMA,
+            },
+        },
     }
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
     data = _post_json(url, headers, payload)
@@ -266,6 +305,7 @@ def _parse_via_gemini(prompt: str) -> str:
             "temperature": 0,
             "maxOutputTokens": MAX_OUTPUT_TOKENS,
             "responseMimeType": "application/json",
+            "responseSchema": TRANSACTIONS_JSON_SCHEMA,
         },
     }
     data = _post_json(url, {"x-goog-api-key": api_key}, payload)
