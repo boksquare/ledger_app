@@ -57,10 +57,20 @@ Open `http://<server-ip>:8321`. The SQLite database and uploaded statements pers
 in the named volume `bills_data` (mounted at `/data`), so they survive updates.
 Back up by copying `/data/expenses.db` out of the volume.
 
-**One-time setup:** GHCR packages are private by default even in a public repo. After
-the workflow's first successful run, open the package on GitHub
-(`https://github.com/boksquare/ledger_app/pkgs/container/ledger_app` → Package settings)
-and change its visibility to Public, so the home server can pull without authenticating.
+**One-time setup:** the GHCR image is private (it follows this repo's visibility), so the
+server needs to authenticate once before it can pull:
+
+```sh
+# create a token at https://github.com/settings/tokens/new with the read:packages
+# scope only, then on the server:
+echo "<token>" | docker login ghcr.io -u boksquare --password-stdin
+```
+
+Docker caches that login, so every later `docker compose pull` just works with no
+further auth. If you'd rather not manage a token, making the package public
+(`https://github.com/boksquare/ledger_app/pkgs/container/ledger_app` → Package settings
+→ Change visibility) removes this step, at the cost of the image itself being pullable
+by anyone.
 
 ## Configuration
 
