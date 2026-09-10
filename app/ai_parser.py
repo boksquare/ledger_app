@@ -198,6 +198,9 @@ def _post_json(url: str, headers: dict, payload: dict) -> dict:
         raise AIParsingError(f"{url} returned a response that wasn't valid JSON.")
 
 
+MAX_OUTPUT_TOKENS = 8000  # a statement with many transactions needs a lot of output JSON
+
+
 def _chat_completion(base_url: str, api_key: str, model: str, prompt: str) -> str:
     """OpenAI-compatible /chat/completions call — shared by NIM and the generic adapter."""
     url = base_url.rstrip("/") + "/chat/completions"
@@ -205,6 +208,7 @@ def _chat_completion(base_url: str, api_key: str, model: str, prompt: str) -> st
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
+        "max_tokens": MAX_OUTPUT_TOKENS,
     }
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
     data = _post_json(url, headers, payload)
@@ -243,7 +247,7 @@ def _parse_via_gemini(prompt: str) -> str:
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0},
+        "generationConfig": {"temperature": 0, "maxOutputTokens": MAX_OUTPUT_TOKENS},
     }
     data = _post_json(url, {"x-goog-api-key": api_key}, payload)
     try:
@@ -283,5 +287,14 @@ def parse_statement_text(text: str, category_names: list[str]) -> dict:
     except AIParsingError as e:
         print(f"[ai_parser] {provider_name}: failed after {time.monotonic() - started:.1f}s — {e}", flush=True)
         raise
-    print(f"[ai_parser] {provider_name}: succeeded in {time.monotonic() - started:.1f}s", flush=True)
-    return _extract_json_object(reply)
+    print(
+        f"[ai_parser] {provider_name}: succeeded in {time.monotonic() - started:.1f}s "
+        f"({len(reply)} chars back)",
+        flush=True,
+    )
+    try:
+        return _extract_json_object(reply)
+    except AIParsingError:
+        preview = reply[:500].replace("\n", " ")
+        print(f"[ai_parser] {provider_name}: unparseable reply, preview: {preview!r}", flush=True)
+        raise
