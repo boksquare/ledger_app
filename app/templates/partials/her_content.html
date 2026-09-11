@@ -12,7 +12,6 @@
     {% if breakdown %}
     <canvas id="category-pie" aria-label="Category spending pie chart"></canvas>
     <script id="pie-data" type="application/json">{{ {"month": month, "filter_category_id": filter_category_id, "slices": breakdown, "endpoint": "/her/partials/expenses", "target": "#her-content"} | tojson }}</script>
-    <p class="hint">Hover a slice for the amount · click to filter the list</p>
     {% else %}
     <p class="empty">No expenses yet this month.</p>
     {% endif %}
@@ -53,7 +52,6 @@
           <a href="#" hx-get="/her/partials/expenses?month={{ month }}" hx-target="#her-content" title="Clear filter">✕</a>
         </span>
       {% endif %}
-      <span class="hint" style="font-weight:normal"> · click any field to edit</span>
     </h2>
     <table class="expense-table inline-editable">
       <thead>
