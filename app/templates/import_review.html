@@ -18,8 +18,7 @@
 {% set pending = txns | selectattr('status', 'equalto', 'pending') | list %}
 {% if pending %}
 <section class="panel">
-  <form method="post" action="/import/{{ imp.id }}/confirm">
-    <p class="hint">Nothing is counted until you confirm. Uncheck rows you don't want; categories and split types are editable.</p>
+  <form method="post" action="/import/{{ imp.id }}/confirm" id="confirm-import-form">
     <table class="expense-table">
       <thead>
         <tr>
@@ -32,14 +31,11 @@
         {% set in_target_month = not target_month or t.date[:7] == target_month %}
         <tr>
           <td><input type="checkbox" class="row-check" name="selected_{{ t.id }}" {% if t.amount > 0 and in_target_month %}checked{% endif %}></td>
-          <td>
-            <input type="date" name="date_{{ t.id }}" value="{{ t.date }}">
-            {% if not in_target_month %}<div class="note">outside {{ target_month | monthname }} — edit or leave unchecked</div>{% endif %}
-          </td>
+          <td><input type="date" name="date_{{ t.id }}" value="{{ t.date }}"></td>
           <td><input type="text" name="description_{{ t.id }}" value="{{ t.description }}" style="width:100%"></td>
           <td class="num">
             <input type="number" step="0.01" name="amount_{{ t.id }}" value="{{ '%.2f' | format(t.amount) }}" style="width:6.5rem">
-            {% if t.amount <= 0 %}<div class="note">refund — edit or leave unchecked</div>{% endif %}
+            {% if t.amount <= 0 %}<span class="tag" title="Refund">↩</span>{% endif %}
           </td>
           <td>
             <select name="category_{{ t.id }}">
@@ -47,7 +43,6 @@
               <option value="{{ c.id }}" {% if c.id == t.suggested_category_id %}selected{% endif %}>{{ c.name }}</option>
               {% endfor %}
             </select>
-            {% if not t.suggested_category_id %}<div class="note">no suggestion</div>{% endif %}
           </td>
           <td>
             <select name="split_{{ t.id }}">
@@ -59,17 +54,16 @@
         {% endfor %}
       </tbody>
     </table>
-    <div class="form-row" style="margin-top:0.75rem; align-items:center">
-      <button type="submit" class="btn btn-primary">Confirm import of checked rows</button>
-      <label style="flex-direction:row; align-items:center; gap:0.4rem">
-        <input type="checkbox" name="discard_unchecked"> discard unchecked rows
-      </label>
-    </div>
+    <label style="flex-direction:row; align-items:center; gap:0.4rem; margin-top:0.75rem">
+      <input type="checkbox" name="discard_unchecked"> discard unchecked rows
+    </label>
   </form>
-  <form method="post" action="/import/{{ imp.id }}/cancel" style="margin-top:0.5rem"
-        onsubmit="return confirm('Cancel this import? {{ pending|length }} pending transaction{{ 's' if pending|length != 1 else '' }} will be discarded.');">
-    <button type="submit" class="btn btn-danger">Cancel import</button>
-  </form>
+  <form method="post" action="/import/{{ imp.id }}/cancel" id="cancel-import-form"
+        onsubmit="return confirm('Cancel this import? {{ pending|length }} pending transaction{{ 's' if pending|length != 1 else '' }} will be discarded.');"></form>
+  <div class="form-row" style="margin-top:0.75rem; align-items:center">
+    <button type="submit" form="confirm-import-form" class="btn btn-primary">Confirm Import</button>
+    <button type="submit" form="cancel-import-form" class="btn btn-danger">Cancel Import</button>
+  </div>
 </section>
 {% endif %}
 
